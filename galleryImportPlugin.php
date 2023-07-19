@@ -5,9 +5,7 @@
     Description: Add images into product gallery from S3 bucket.
     Version: 1.0
     Author: Abhijith  Santhosh
-
     */
-
     // Step 1: Create the Settings Page
     function image_uploader_plugin_settings_page()
     {
@@ -20,24 +18,20 @@
             'image_uploader_plugin_settings_callback'
         );
     }
-
     function image_uploader_plugin_settings_callback()
     {
         // Check if the user has permissions to access the settings page
         if (!current_user_can('manage_options')) {
             return;
         }
-
         // Save the URL in the database when the form is submitted
         if (isset($_POST['image_uploader_url'])) {
             save_image_uploader_url();
         }
-
         // Handle the image import on button click
         if (isset($_POST['import_images'])) {
             fetch_and_attach_images();
         }
-
         // Display the settings page form
     ?>
         <div class="wrap">
@@ -66,22 +60,16 @@
         </div>
     <?php
     }
-
     // Step 2: Save the URL in the Database
     function save_image_uploader_url()
     {
         // Handle the uploaded S3 bucket URL here
         $s3_bucket_url = sanitize_text_field($_POST['image_uploader_url']);
         update_option('image_uploader_url', $s3_bucket_url);
-
         echo '<div class="notice notice-success"><p>URL successfully saved!</p></div>';
     }
-
     // Hook the settings page function to the admin menu
     add_action('admin_menu', 'image_uploader_plugin_settings_page');
-
-
-
     // Step 3: Retrieve Product IDs
     function get_product_ids()
     {
@@ -90,16 +78,12 @@
             'post_type' => 'product',
             'posts_per_page' => -1,
         ));
-
         $product_ids = array();
         foreach ($products as $product) {
             $product_ids[] = $product->ID;
         }
-
         return $product_ids;
     }
-
-
     // Step 4: Fetch Images and Attach to Products
     function fetch_and_attach_images()
     {
@@ -109,51 +93,26 @@
             return;
         }
         $product_ids = get_product_ids();
-
-
         foreach ($product_ids as $product_id) {
-
             $image_filename = $product_id . '.jpg'; // Assuming the image filename is the same as the product ID and has a .jpg extension
-
             // Construct the URL of the image in the S3 bucket
-
             $image_url = trailingslashit($s3_bucket_url) . $image_filename;
-
-
-
-            // Make a GET request to fetch the image from the S3 bucket
-            $response = wp_remote_get($image_url);
-
-
-
-            // Check if the request was successful and if the image exists
-            if (is_wp_error($response) || wp_remote_retrieve_response_code($response) !== 200) {
-                continue; // Skip to the next product if image not found
-            }
-
-
-            $image_data = wp_remote_retrieve_body($response);
-            // Check if the image data is not empty
-            if (empty($image_data)) {
-                continue; // Skip to the next product if image data is empty
-            }
-
+           
+           
             attach_images($image_url, $product_id);
+            // exit;
         }
     }
-
     function attach_images($image_url, $product_id)
     {
         // Upload the image to the WordPress media library
-        $attachment_id = media_sideload_image($image_url, $product_id);
-
-        if (is_wp_error($attachment_id)) {
+        $attachment_id = media_sideload_image($image_url,null,null,'id');
+         if (is_wp_error($attachment_id)) {
             // There was an error uploading the image
             echo 'Error uploading image: ' . $attachment_id->get_error_message();
-        } else {
+            } else {
             // Image uploaded successfully, and $attachment_id contains the attachment ID
             echo 'Image uploaded successfully! Attachment ID: ' . $attachment_id;
-
             // Append the attachment ID to the product gallery
             $product_gallery = get_post_meta($product_id, '_product_image_gallery', true);
             $product_gallery .= ',' . $attachment_id;
